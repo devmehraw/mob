@@ -118,7 +118,6 @@ function AppTabNavigator() {
     >
       <AppTabs.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
       <AppTabs.Screen name="Leads" component={LeadsStackNavigator} options={{ headerShown: false }} />
-      {/* NEW: Use the dedicated ColdLeadsTabNavigator for the "Cold Leads" tab */}
       <AppTabs.Screen name="Cold Leads" component={ColdLeadsTabNavigator} options={{ headerShown: false }} />
       <AppTabs.Screen name="Profile" component={UserProfileScreen} options={{ headerShown: false }} />
     </AppTabs.Navigator>
