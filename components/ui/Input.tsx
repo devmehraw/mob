@@ -1,10 +1,8 @@
-// components/ui/Input.tsx (Conceptual update)
 import React, { useRef, useState } from 'react';
 import { TextInput, StyleSheet, TextInputProps, Animated, View } from 'react-native';
-import { theme } from '../../theme'; // Import your theme
+import { theme } from '../../theme';
 
 interface InputProps extends TextInputProps {
-  // Add any custom props if you have them
   error?: boolean;
   animateOnFocus?: boolean;
 }
@@ -31,7 +29,7 @@ export const Input: React.FC<InputProps> = ({
           useNativeDriver: false,
         }),
         Animated.spring(scaleValue, {
-          toValue: 1.02,
+          toValue: 1.01,
           useNativeDriver: true,
         }),
       ]).start();
@@ -61,6 +59,7 @@ export const Input: React.FC<InputProps> = ({
     inputRange: [0, 1],
     outputRange: [error ? theme.colors.danger : theme.colors.border, theme.colors.primary],
   });
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
       <Animated.View style={[styles.inputContainer, { borderColor }]}>
@@ -78,15 +77,15 @@ export const Input: React.FC<InputProps> = ({
 
 const styles = StyleSheet.create({
   inputContainer: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderRadius: theme.borderRadius,
     backgroundColor: theme.colors.background.card,
     ...theme.shadows.small,
   },
   input: {
-    height: 50,
-    paddingHorizontal: theme.spacing.medium, // Use theme spacing
-    fontSize: theme.typography.fontSize.body, // Use theme font size
-    color: theme.colors.text.dark, // Use theme color
+    height: 48,
+    paddingHorizontal: 12, // Minimal padding as requested
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.text.dark,
   },
 });
