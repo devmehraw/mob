@@ -1,7 +1,7 @@
 // screens/LeadsScreen.tsx
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, SafeAreaView, RefreshControl, Animated, StatusBar } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,8 @@ import { Button } from '../components/ui/Button';
 import { PermissionService } from '../lib/permissions';
 import { LeadsStackParamList } from '../navigation/types';
 import { theme } from '../theme'; // Import your theme
+import { AnimatedCard } from '../components/ui/AnimatedCard';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
 type LeadsScreenNavigationProp = StackScreenProps<LeadsStackParamList, 'LeadsList'>['navigation'];
 
@@ -21,14 +23,20 @@ const LeadsScreen = () => {
   const { leads, loading, error, fetchLeads, deleteLead } = useLeads();
   const permissionService = PermissionService.getInstance();
 
-  // Removed isAddModalOpen, isImportModalOpen, isExportModalOpen as they seem unused here
   const [refreshing, setRefreshing] = useState(false); // For pull-to-refresh
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const headerAnimation = useRef(new Animated.Value(0)).current;
+  const listAnimation = useRef(new Animated.Value(0)).current;
 
   const canCreateLeads = permissionService.hasPermission(user, 'leads', 'create');
-  // const canImportExportLeads = permissionService.hasPermission(user, 'reports', 'export'); // This variable is not used in the provided code
 
-  // Filtered leads state
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+
+  useEffect(() => {
+    Animated.stagger(200, [
+      theme.animations.fadeIn(headerAnimation, 600),
+      theme.animations.slideInFromLeft(listAnimation, 800),
+    ]).start();
+  }, [headerAnimation, listAnimation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -95,69 +103,85 @@ const LeadsScreen = () => {
 
   const getStatusStyle = (status: Lead['status']) => {
     switch (status) {
-      case 'New': return { backgroundColor: theme.colors.secondary + '20', color: theme.colors.secondary };
-      case 'Contacted': return { backgroundColor: theme.colors.primary + '20', color: theme.colors.primary };
-      case 'Qualified': return { backgroundColor: theme.colors.success + '20', color: theme.colors.success };
-      case 'Converted': return { backgroundColor: theme.colors.accent + '20', color: theme.colors.accent };
-      case 'Lost': return { backgroundColor: theme.colors.danger + '20', color: theme.colors.danger };
-      case 'Hold': return { backgroundColor: theme.colors.warning + '20', color: theme.colors.warning };
-      default: return { backgroundColor: theme.colors.background.dark, color: theme.colors.text.medium };
+      case 'New': return { backgroundColor: theme.colors.secondary + '20', color: theme.colors.secondary, icon: 'star' };
+      case 'Contacted': return { backgroundColor: theme.colors.primary + '20', color: theme.colors.primary, icon: 'call' };
+      case 'Qualified': return { backgroundColor: theme.colors.success + '20', color: theme.colors.success, icon: 'checkmark-circle' };
+      case 'Converted': return { backgroundColor: theme.colors.accent + '20', color: theme.colors.accent, icon: 'trophy' };
+      case 'Lost': return { backgroundColor: theme.colors.danger + '20', color: theme.colors.danger, icon: 'close-circle' };
+      case 'Hold': return { backgroundColor: theme.colors.warning + '20', color: theme.colors.warning, icon: 'pause-circle' };
+      default: return { backgroundColor: theme.colors.background.dark, color: theme.colors.text.medium, icon: 'help-circle' };
     }
   };
 
   const renderLeadCard = ({ item }: { item: Lead }) => {
     const statusStyle = getStatusStyle(item.status);
     return (
-      <TouchableOpacity
-        style={styles.leadCard}
-        onPress={() => navigation.navigate('LeadDetails', { leadId: item.id })}
-        activeOpacity={0.8}
-      >
-        <View style={styles.leadCardHeader}>
-          <Text style={styles.leadName}>{item.name}</Text>
-          <Text style={[styles.leadStatus, { backgroundColor: statusStyle.backgroundColor, color: statusStyle.color }]}>{item.status}</Text>
-        </View>
-        <View style={styles.leadInfo}>
-          <Text style={styles.leadDetail}>
-            <Ionicons name="mail-outline" size={theme.typography.fontSize.small} color={theme.colors.text.medium} /> <Text style={styles.detailLabel}>Email:</Text> {item.primaryEmail}
-          </Text>
-          <Text style={styles.leadDetail}>
-            <Ionicons name="call-outline" size={theme.typography.fontSize.small} color={theme.colors.text.medium} /> <Text style={styles.detailLabel}>Phone:</Text> {item.primaryPhone}
-          </Text>
-          <Text style={styles.leadDetail}>
-            <Ionicons name="globe-outline" size={theme.typography.fontSize.small} color={theme.colors.text.medium} /> <Text style={styles.detailLabel}>Source:</Text> {item.source}
-          </Text>
-          <Text style={styles.leadDetail}>
-            <Ionicons name="person-outline" size={theme.typography.fontSize.small} color={theme.colors.text.medium} /> <Text style={styles.detailLabel}>Assigned Agent:</Text> {item.assignedAgent || 'Unassigned'}
-          </Text>
-        </View>
-        <View style={styles.leadActions}>
-          {permissionService.hasPermission(user, 'leads', 'update') && (
-            <Button
-              title="Edit"
-              onPress={() => navigation.navigate('AddEditLead', { leadId: item.id })}
-              variant="outline"
-              icon={<Ionicons name="create-outline" size={18} color={theme.colors.primary} />}
-            />
-          )}
-          {permissionService.hasPermission(user, 'leads', 'delete') && (
-            <Button
-              title="Delete"
-              onPress={() => handleDeleteLead(item.id)}
-              variant="destructive"
-              icon={<Ionicons name="trash-outline" size={18} color={theme.colors.text.white} />}
-            />
-          )}
-        </View>
-      </TouchableOpacity>
+      <AnimatedCard style={styles.leadCard} animationType="fadeIn" delay={100}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('LeadDetails', { leadId: item.id })}
+          activeOpacity={0.8}
+          style={styles.leadCardContent}
+        >
+          <View style={styles.leadCardHeader}>
+            <View style={styles.leadNameContainer}>
+              <Text style={styles.leadName}>{item.name}</Text>
+              <Text style={styles.leadScore}>Score: {item.leadScore}</Text>
+            </View>
+            <View style={[styles.leadStatus, { backgroundColor: statusStyle.backgroundColor }]}>
+              <Ionicons name={statusStyle.icon as any} size={14} color={statusStyle.color} />
+              <Text style={[styles.leadStatusText, { color: statusStyle.color }]}>{item.status}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.leadInfo}>
+            <View style={styles.leadDetailRow}>
+              <Ionicons name="mail-outline" size={16} color={theme.colors.text.medium} />
+              <Text style={styles.leadDetail}>{item.primaryEmail}</Text>
+            </View>
+            <View style={styles.leadDetailRow}>
+              <Ionicons name="call-outline" size={16} color={theme.colors.text.medium} />
+              <Text style={styles.leadDetail}>{item.primaryPhone}</Text>
+            </View>
+            <View style={styles.leadDetailRow}>
+              <Ionicons name="business-outline" size={16} color={theme.colors.text.medium} />
+              <Text style={styles.leadDetail}>{item.propertyType} • {item.budgetRange}</Text>
+            </View>
+            <View style={styles.leadDetailRow}>
+              <Ionicons name="person-outline" size={16} color={theme.colors.text.medium} />
+              <Text style={styles.leadDetail}>{item.assignedAgent || 'Unassigned'}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.leadActions}>
+            {permissionService.hasPermission(user, 'leads', 'update') && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('AddEditLead', { leadId: item.id })}
+              >
+                <Ionicons name="create-outline" size={18} color={theme.colors.primary} />
+                <Text style={styles.actionButtonText}>Edit</Text>
+              </TouchableOpacity>
+            )}
+            {permissionService.hasPermission(user, 'leads', 'delete') && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={() => handleDeleteLead(item.id)}
+              >
+                <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                <Text style={[styles.actionButtonText, { color: theme.colors.danger }]}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </TouchableOpacity>
+      </AnimatedCard>
     );
   };
 
   if (loading && !refreshing) { // Show full-screen loader only on initial load
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading leads...</Text>
+        <LoadingSpinner size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading your leads...</Text>
       </View>
     );
   }
@@ -165,52 +189,70 @@ const LeadsScreen = () => {
   if (error) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-        <Button title="Retry" onPress={() => fetchLeads('Lead')} />
+        <Ionicons name="alert-circle" size={60} color={theme.colors.danger} />
+        <Text style={styles.errorText}>{error}</Text>
+        <Button 
+          title="Try Again" 
+          onPress={() => fetchLeads('Lead')} 
+          icon={<Ionicons name="refresh" size={18} color={theme.colors.text.white} />}
+        />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.title}>All Leads</Text>
-        <View style={styles.headerButtons}>
-          {canCreateLeads && (
-            <TouchableOpacity onPress={handleAddLead} style={styles.addButton} activeOpacity={0.7}>
-              <Ionicons name="add-circle" size={theme.typography.fontSize.h2 + 5} color={theme.colors.primary} />
-              <Text style={styles.addButtonText}>Add Lead</Text>
-            </TouchableOpacity>
-          )}
-          {/* Add Import/Export buttons if needed and permitted */}
-        </View>
-      </View>
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background.screen} />
+      <SafeAreaView style={styles.safeArea}>
+        <Animated.View style={[styles.header, { opacity: headerAnimation }]}>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.title}>All Leads</Text>
+              <Text style={styles.subtitle}>{filteredLeads.length} active leads</Text>
+            </View>
+            {canCreateLeads && (
+              <TouchableOpacity onPress={handleAddLead} style={styles.addButton} activeOpacity={0.8}>
+                <Ionicons name="add" size={24} color={theme.colors.text.white} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </Animated.View>
 
-      {filteredLeads.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="people-circle-outline" size={theme.typography.fontSize.h1 * 2} color={theme.colors.text.light} />
-          <Text style={styles.emptyStateText}>No leads found yet. Start by adding a new lead!</Text>
-          {canCreateLeads && (
-            <Button title="Add New Lead" onPress={handleAddLead} />
-          )}
-        </View>
-      ) : (
-        <FlatList
-          data={filteredLeads}
-          keyExtractor={(item) => item.id}
-          renderItem={renderLeadCard}
-          contentContainerStyle={styles.listContentContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.colors.primary}
+        {filteredLeads.length === 0 ? (
+          <AnimatedCard style={styles.emptyState} animationType="scaleIn" delay={400}>
+            <Ionicons name="people-circle-outline" size={80} color={theme.colors.text.light} />
+            <Text style={styles.emptyStateTitle}>No leads found</Text>
+            <Text style={styles.emptyStateText}>Start building your pipeline by adding your first lead!</Text>
+            {canCreateLeads && (
+              <Button 
+                title="Add Your First Lead" 
+                onPress={handleAddLead}
+                icon={<Ionicons name="add-circle" size={20} color={theme.colors.text.white} />}
+                style={styles.emptyStateButton}
+              />
+            )}
+          </AnimatedCard>
+        ) : (
+          <Animated.View style={[{ flex: 1 }, { opacity: listAnimation }]}>
+            <FlatList
+              data={filteredLeads}
+              keyExtractor={(item) => item.id}
+              renderItem={renderLeadCard}
+              contentContainerStyle={styles.listContentContainer}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={theme.colors.primary}
+                  colors={[theme.colors.primary]}
+                />
+              }
             />
-          }
-        />
-      )}
-    </SafeAreaView>
+          </Animated.View>
+        )}
+      </SafeAreaView>
+    </>
   );
 };
 
@@ -219,45 +261,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background.screen,
   },
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.screen,
-  },
   header: {
-    paddingHorizontal: theme.spacing.large,
-    paddingVertical: theme.spacing.medium,
     backgroundColor: theme.colors.background.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    ...theme.shadows.small,
+    marginBottom: theme.spacing.medium,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: theme.spacing.xxlarge, // Adjust for status bar
+    paddingHorizontal: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
   },
   title: {
-    fontSize: theme.typography.fontSize.h2,
+    fontSize: 28,
     fontWeight: '700',
     color: theme.colors.text.dark,
   },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  subtitle: {
+    fontSize: theme.typography.fontSize.small,
+    color: theme.colors.text.medium,
+    marginTop: 2,
   },
   addButton: {
-    flexDirection: 'row',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.primary + '10', // A lighter shade of primary for the button background
-    paddingVertical: theme.spacing.small,
-    paddingHorizontal: theme.spacing.medium,
-    borderRadius: theme.borderRadius,
-    marginLeft: theme.spacing.small,
-    ...theme.cardShadow, // Apply consistent shadow
-  },
-  addButtonText: {
-    marginLeft: theme.spacing.xsmall,
-    fontSize: theme.typography.fontSize.body,
-    color: theme.colors.primary,
-    fontWeight: '600',
+    ...theme.shadows.medium,
   },
   centered: {
     flex: 1,
@@ -270,93 +303,117 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.medium,
     fontSize: theme.typography.fontSize.body,
     color: theme.colors.text.medium,
+    textAlign: 'center',
   },
   errorText: {
-    fontSize: theme.typography.fontSize.body,
+    fontSize: theme.typography.fontSize.large,
     color: theme.colors.danger,
-    marginBottom: theme.spacing.medium,
+    marginVertical: theme.spacing.medium,
     textAlign: 'center',
+    fontWeight: '500',
   },
   emptyState: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xlarge,
-    backgroundColor: theme.colors.background.card, // Make empty state background match cards
-    marginHorizontal: theme.spacing.large,
-    borderRadius: theme.borderRadius,
-    ...theme.cardShadow,
-    marginTop: theme.spacing.large,
+    padding: theme.spacing.xxlarge,
+    margin: theme.spacing.large,
+  },
+  emptyStateTitle: {
+    fontSize: theme.typography.fontSize.h2,
+    fontWeight: '600',
+    color: theme.colors.text.dark,
+    marginTop: theme.spacing.medium,
+    marginBottom: theme.spacing.small,
   },
   emptyStateText: {
-    fontSize: theme.typography.fontSize.large,
+    fontSize: theme.typography.fontSize.body,
     color: theme.colors.text.light,
-    marginTop: theme.spacing.medium,
     marginBottom: theme.spacing.large,
     textAlign: 'center',
+    lineHeight: 22,
+  },
+  emptyStateButton: {
+    marginTop: theme.spacing.medium,
   },
   listContentContainer: {
     paddingHorizontal: theme.spacing.large,
-    paddingVertical: theme.spacing.large,
+    paddingBottom: theme.spacing.large,
   },
   leadCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius,
-    padding: theme.spacing.medium,
     marginBottom: theme.spacing.medium,
-    ...theme.cardShadow,
+  },
+  leadCardContent: {
+    padding: theme.spacing.medium,
   },
   leadCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.small,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingBottom: theme.spacing.xsmall,
+  },
+  leadNameContainer: {
+    flex: 1,
   },
   leadName: {
-    fontSize: theme.typography.fontSize.large,
+    fontSize: 18,
     fontWeight: '600',
     color: theme.colors.text.dark,
+    marginBottom: 2,
+  },
+  leadScore: {
+    fontSize: theme.typography.fontSize.small,
+    color: theme.colors.text.medium,
   },
   leadStatus: {
-    fontSize: theme.typography.fontSize.small,
-    fontWeight: 'bold',
-    backgroundColor: theme.colors.success + '20', // Default green for status, will be overridden by getStatusStyle
-    color: theme.colors.success, // Default green for status, will be overridden by getStatusStyle
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: theme.spacing.small,
     paddingVertical: theme.spacing.xsmall,
-    borderRadius: theme.borderRadius - 4, // Slightly smaller radius for badge
-    overflow: 'hidden', // Ensure background doesn't bleed out
+    borderRadius: 12,
+  },
+  leadStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   leadInfo: {
-    marginBottom: theme.spacing.small,
+    marginBottom: theme.spacing.medium,
+  },
+  leadDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xsmall,
   },
   leadDetail: {
     fontSize: theme.typography.fontSize.small,
     color: theme.colors.text.medium,
-    marginBottom: theme.spacing.xsmall / 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    lineHeight: theme.typography.fontSize.small * 1.5, // Improve line spacing
-  },
-  detailLabel: {
-    fontWeight: '600',
-    color: theme.colors.text.dark,
-    marginRight: theme.spacing.xsmall,
+    marginLeft: theme.spacing.small,
+    flex: 1,
   },
   leadActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: theme.spacing.small, // Use gap for spacing between buttons
-    marginTop: theme.spacing.small,
+    justifyContent: 'space-around',
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     paddingTop: theme.spacing.small,
   },
-  // actionButton and actionButtonText styles are now handled by the custom Button component,
-  // so they are removed from here.
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xsmall,
+    paddingHorizontal: theme.spacing.small,
+    borderRadius: theme.borderRadius,
+    backgroundColor: theme.colors.background.screen,
+  },
+  deleteButton: {
+    backgroundColor: theme.colors.danger + '10',
+  },
+  actionButtonText: {
+    marginLeft: theme.spacing.xsmall,
+    fontSize: theme.typography.fontSize.small,
+    color: theme.colors.primary,
+    fontWeight: '500',
+  },
 });
 
 export default LeadsScreen;

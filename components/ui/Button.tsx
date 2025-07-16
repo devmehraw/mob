@@ -1,7 +1,8 @@
 // components/ui/Button.tsx
 
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, Animated } from 'react-native';
+import { theme } from '../../theme';
 
 interface ButtonProps {
   title: string;
@@ -13,6 +14,7 @@ interface ButtonProps {
   style?: ViewStyle; // Custom style for the TouchableOpacity
   textStyle?: TextStyle; // Custom style for the Text
   disabled?: boolean; // New: Add disabled prop
+  animateOnPress?: boolean; // New: Add press animation
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -25,7 +27,44 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   disabled = false, // Default to false
+  animateOnPress = true,
 }) => {
+  const scaleValue = useRef(new Animated.Value(1)).current;
+  const opacityValue = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (disabled || isLoading) {
+      Animated.timing(opacityValue, {
+        toValue: 0.6,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(opacityValue, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [disabled, isLoading, opacityValue]);
+
+  const handlePressIn = () => {
+    if (animateOnPress && !disabled && !isLoading) {
+      Animated.spring(scaleValue, {
+        toValue: 0.95,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  const handlePressOut = () => {
+    if (animateOnPress && !disabled && !isLoading) {
+      Animated.spring(scaleValue, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
   const getButtonStyles = () => {
     let buttonStyles: ViewStyle = { ...styles.buttonBase };
     let textStyles: TextStyle = { ...styles.textBase };
@@ -77,22 +116,25 @@ export const Button: React.FC<ButtonProps> = ({
   const { buttonStyles, textStyles } = getButtonStyles();
 
   return (
-    <TouchableOpacity
-      style={[buttonStyles, style]}
-      onPress={onPress}
-      disabled={isLoading || disabled} // Disable interaction when loading or explicitly disabled
-      activeOpacity={0.7}
-    >
-      {isLoading ? (
-        <ActivityIndicator color={variant === 'primary' || variant === 'destructive' ? '#fff' : '#2f80ed'} />
-      ) : (
-        <>
-          {icon && <React.Fragment>{icon}</React.Fragment>}
-          {/* Fix: Conditionally apply textWithIcon style using a ternary operator */}
-          <Text style={[textStyles, icon ? styles.textWithIcon : null, textStyle]}>{title}</Text>
-        </>
-      )}
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale: scaleValue }], opacity: opacityValue }}>
+      <TouchableOpacity
+        style={[buttonStyles, style]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={isLoading || disabled}
+        activeOpacity={0.8}
+      >
+        {isLoading ? (
+          <ActivityIndicator color={variant === 'primary' || variant === 'destructive' ? '#fff' : theme.colors.primary} />
+        ) : (
+          <>
+            {icon && <React.Fragment>{icon}</React.Fragment>}
+            <Text style={[textStyles, icon ? styles.textWithIcon : null, textStyle]}>{title}</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
@@ -103,8 +145,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: theme.borderRadius,
     minWidth: 100,
+    ...theme.shadows.small,
   },
   textBase: {
     fontSize: 16,
@@ -117,32 +160,32 @@ const styles = StyleSheet.create({
 
   // Variants
   primaryButton: {
-    backgroundColor: '#2f80ed', // Blue
+    backgroundColor: theme.colors.primary,
   },
   primaryText: {
-    color: '#fff',
+    color: theme.colors.text.white,
   },
   secondaryButton: {
-    backgroundColor: '#f0f0f0', // Light gray
-    borderColor: '#ddd',
+    backgroundColor: theme.colors.background.dark,
+    borderColor: theme.colors.border,
     borderWidth: 1,
   },
   secondaryText: {
-    color: '#333',
+    color: theme.colors.text.dark,
   },
   outlineButton: {
     backgroundColor: 'transparent',
-    borderColor: '#2f80ed',
+    borderColor: theme.colors.primary,
     borderWidth: 2,
   },
   outlineText: {
-    color: '#2f80ed',
+    color: theme.colors.primary,
   },
   destructiveButton: {
-    backgroundColor: '#e74c3c', // Red
+    backgroundColor: theme.colors.danger,
   },
   destructiveText: {
-    color: '#fff',
+    color: theme.colors.text.white,
   },
 
   // Sizes

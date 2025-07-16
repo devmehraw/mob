@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Dimensions, StatusBar } from 'react-native';
 import { Input } from '../../components/ui/Input'; // Assuming this Input component exists
 import { Button } from '../../components/ui/Button'; // Assuming this Button component exists
 import { useAuth } from '../../hooks/useAuth'; // Assuming useAuth hook exists
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../theme'; // Import your theme
+import { AnimatedCard } from '../../components/ui/AnimatedCard';
 
 const { height } = Dimensions.get('window'); // Get screen height for responsive scroll view
 
@@ -35,132 +36,158 @@ const LoginScreen = ({ navigation }: any) => {
   };
 
   return (
-    <LinearGradient // Background gradient for a modern look
-      colors={[theme.colors.background.screen, theme.colors.background.dark]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
-      <KeyboardAvoidingView // Ensures inputs are visible when keyboard is open
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.secondary, theme.colors.accent]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={styles.appName}>RealEstate CRM</Text> {/* Application Name */}
-            <Text style={styles.tagline}>Your Gateway to Property Success</Text>
-          </View>
-
-          <View style={styles.card}> {/* Card-like container for the login form */}
-            <Text style={styles.title}>Welcome Back!</Text>
-            <Text style={styles.subtitle}>Log in to your account</Text>
-
-            {errorMessage && ( // Display error message if present
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <AnimatedCard style={styles.headerCard} animationType="fadeIn" delay={200}>
+              <View style={styles.header}>
+                <View style={styles.logoContainer}>
+                  <Ionicons name="home" size={50} color={theme.colors.primary} />
+                </View>
+                <Text style={styles.appName}>RealEstate CRM</Text>
+                <Text style={styles.tagline}>Your Gateway to Property Success</Text>
               </View>
-            )}
+            </AnimatedCard>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <Input
-                placeholder="Enter your email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                style={styles.input} // Apply specific input style if needed (Input component should handle most styling)
-              />
-            </View>
+            <AnimatedCard style={styles.card} animationType="slideInFromLeft" delay={400}>
+              <Text style={styles.title}>Welcome Back!</Text>
+              <Text style={styles.subtitle}>Log in to your account</Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordContainer}>
+              {errorMessage && (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              )}
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  <Ionicons name="mail-outline" size={16} color={theme.colors.text.medium} /> Email
+                </Text>
                 <Input
-                  placeholder="Enter your password"
-                  secureTextEntry={!showPassword} // Toggle secure text entry
-                  value={password}
-                  onChangeText={setPassword}
-                  style={styles.passwordInput} // Apply specific input style
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                  error={!!errorMessage}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.togglePasswordButton}
-                >
-                  <Ionicons // Eye icon to show/hide password
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={20}
-                    color={theme.colors.text.light} // Use theme color for icon
-                  />
-                </TouchableOpacity>
               </View>
-            </View>
 
-            <TouchableOpacity style={styles.forgotPasswordButton}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  <Ionicons name="lock-closed-outline" size={16} color={theme.colors.text.medium} /> Password
+                </Text>
+                <View style={styles.passwordContainer}>
+                  <Input
+                    placeholder="Enter your password"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    style={styles.passwordInput}
+                    error={!!errorMessage}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.togglePasswordButton}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color={theme.colors.text.light}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-            <Button
-              title="Log In"
-              onPress={handleLogin}
-              isLoading={isLoading} // Show loading spinner when logging in
-              style={styles.loginButton}
-            />
+              <TouchableOpacity style={styles.forgotPasswordButton}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
 
-            <View style={styles.dividerContainer}> {/* "OR" divider for alternative login methods */}
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
+              <Button
+                title="Log In"
+                onPress={handleLogin}
+                isLoading={isLoading}
+                style={styles.loginButton}
+                icon={<Ionicons name="log-in-outline" size={20} color={theme.colors.text.white} />}
+              />
 
-            {/* Placeholder for social login buttons (e.g., Google) */}
-            <Button
-              title="Sign In with Google"
-              onPress={() => Alert.alert('Google Login', 'Coming Soon!')}
-              variant="outline" // Assuming 'outline' variant for buttons
-              icon={<Ionicons name="logo-google" size={20} color={theme.colors.primary} />} // Google icon
-              style={styles.socialButton}
-            />
-          </View>
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-          <TouchableOpacity
-            style={styles.registerLink}
-            onPress={() => navigation.navigate('Register')} // Navigate to Register screen
-          >
-            <Text style={styles.registerText}>
-              Don't have an account? <Text style={styles.registerLinkHighlight}>Sign Up</Text>
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+              <Button
+                title="Sign In with Google"
+                onPress={() => Alert.alert('Google Login', 'Coming Soon!')}
+                variant="outline"
+                icon={<Ionicons name="logo-google" size={20} color={theme.colors.primary} />}
+                style={styles.socialButton}
+              />
+            </AnimatedCard>
+
+            <AnimatedCard style={styles.registerLinkCard} animationType="fadeIn" delay={600}>
+              <TouchableOpacity
+                style={styles.registerLink}
+                onPress={() => navigation.navigate('Register')}
+              >
+                <Text style={styles.registerText}>
+                  Don't have an account? <Text style={styles.registerLinkHighlight}>Sign Up</Text>
+                </Text>
+              </TouchableOpacity>
+            </AnimatedCard>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // Background color set by LinearGradient, but also a fallback
-    backgroundColor: theme.colors.background.screen,
-    justifyContent: 'center',
+    paddingTop: 50,
   },
   keyboardAvoidingView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1, // Allows content to expand and be scrollable
-    justifyContent: 'center',
     padding: theme.spacing.large,
     minHeight: height, // Ensure scroll view takes full height
   },
+  headerCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    marginBottom: theme.spacing.large,
+  },
   header: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xlarge,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.colors.background.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.medium,
+    ...theme.shadows.medium,
   },
   appName: {
     fontSize: theme.typography.fontSize.h1,
-    fontWeight: 'bold', // Changed from theme.typography.fontWeight.bold
-    color: theme.colors.primary, // Use primary color for app name
+    fontWeight: 'bold',
+    color: theme.colors.primary,
     marginBottom: theme.spacing.small,
   },
   tagline: {
@@ -169,15 +196,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: theme.colors.background.card, // White card background
-    borderRadius: theme.borderRadius, // Apply consistent border radius from theme
-    padding: theme.spacing.large,
-    ...theme.cardShadow, // Apply global card shadow from theme
+    backgroundColor: 'rgba(255,255,255,0.95)',
     marginBottom: theme.spacing.xlarge,
+    ...theme.shadows.large,
   },
   title: {
     fontSize: theme.typography.fontSize.h2,
-    fontWeight: 'bold', // Changed from theme.typography.fontWeight.bold
+    fontWeight: 'bold',
     color: theme.colors.text.dark,
     marginBottom: theme.spacing.small,
     textAlign: 'center',
@@ -189,7 +214,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorBox: {
-    backgroundColor: theme.colors.danger + '10', // Light red with 10% opacity
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.danger + '10',
     padding: theme.spacing.medium,
     borderRadius: theme.borderRadius,
     marginBottom: theme.spacing.medium,
@@ -199,7 +226,8 @@ const styles = StyleSheet.create({
   errorText: {
     color: theme.colors.danger,
     fontSize: theme.typography.fontSize.small,
-    textAlign: 'center',
+    marginLeft: theme.spacing.small,
+    flex: 1,
   },
   inputGroup: {
     marginBottom: theme.spacing.medium,
@@ -208,11 +236,9 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.small,
     color: theme.colors.text.medium,
     marginBottom: theme.spacing.xsmall,
-    fontWeight: '500', // Changed from theme.typography.fontWeight.medium
-  },
-  input: {
-    // These styles are generally handled by your custom Input component.
-    // Add overrides here if specific to LoginScreen inputs.
+    fontWeight: '500',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -235,7 +261,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: theme.typography.fontSize.small,
     color: theme.colors.primary,
-    fontWeight: '500', // Changed from theme.typography.fontWeight.medium
+    fontWeight: '500',
   },
   loginButton: {
     marginTop: theme.spacing.medium,
@@ -248,20 +274,23 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border, // Use theme border color
+    backgroundColor: theme.colors.border,
   },
   dividerText: {
     marginHorizontal: theme.spacing.medium,
     color: theme.colors.text.light,
     fontSize: theme.typography.fontSize.small,
-    fontWeight: '500', // Changed from theme.typography.fontWeight.medium
+    fontWeight: '500',
   },
   socialButton: {
     marginTop: theme.spacing.small,
   },
+  registerLinkCard: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    padding: theme.spacing.medium,
+  },
   registerLink: {
     alignItems: 'center',
-    marginTop: theme.spacing.large,
   },
   registerText: {
     fontSize: theme.typography.fontSize.body,
@@ -269,7 +298,7 @@ const styles = StyleSheet.create({
   },
   registerLinkHighlight: {
     color: theme.colors.primary,
-    fontWeight: 'bold', // Changed from theme.typography.fontWeight.bold
+    fontWeight: 'bold',
   },
 });
 
